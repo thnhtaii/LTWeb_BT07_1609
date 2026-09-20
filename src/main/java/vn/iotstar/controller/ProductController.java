@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import vn.iotstar.service.IStorageService;
 
 @Controller
-@RequestMapping(path = "/admin/products")
+@RequestMapping(path = {"/admin/products", "/admin/categories"})
 public class ProductController {
 
 	@Autowired

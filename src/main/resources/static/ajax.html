@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HƯỚNG DẪN AJAX VỚI RESTFUL API TRONG SPRING BOOT</title>
+
+<!-- Bootstrap 5 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+	integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+<!-- Font Awesome 6 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta2/css/all.min.css"
+	integrity="sha512-YWzhKL2whUzgiheMoBFwW8CKV4qpHQAEuvilg9FAn5VJUDwKZZxkJNuGM4XkWuk94WCrrwslk8yWNGmY1EduTA=="
+	crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+<!-- Boxicons -->
+<link href="https://unpkg.com/boxicons@2.0.9/css/boxicons.min.css" rel="stylesheet" />
+
+<!-- jQuery 3.6.4 -->
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script>var contextPath = "";</script>
+
+<style>
+	body { background-color: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+	.card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: none; }
+	.table img { width: 65px; height: 65px; object-fit: cover; border-radius: 8px; border: 1px solid #dee2e6; }
+	.nav-tabs .nav-link { font-weight: 600; color: #495057; }
+	.nav-tabs .nav-link.active { color: #0d6efd; border-color: #dee2e6 #dee2e6 #fff; }
+</style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+	<div class="container-fluid">
+		<a class="navbar-brand fw-bold" href="/"><i class="fas fa-cubes me-2"></i>BT07 - Spring Boot 3 AJAX REST API</a>
+		<div class="d-flex">
+			<a href="/swagger-ui/index.html" target="_blank" class="btn btn-outline-info btn-sm">
+				<i class="fas fa-book me-1"></i> Swagger UI
+			</a>
+		</div>
+	</div>
+</nav>
+
+<div class="container pb-5">
+	<ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+		<li class="nav-item" role="presentation">
+			<button class="nav-link active" id="category-tab" data-bs-toggle="tab" data-bs-target="#category-pane" type="button" role="tab">
+				<i class="fas fa-folder me-2"></i>Quản lý Category (AJAX)
+			</button>
+		</li>
+		<li class="nav-item" role="presentation">
+			<button class="nav-link" id="product-tab" data-bs-toggle="tab" data-bs-target="#product-pane" type="button" role="tab">
+				<i class="fas fa-box-open me-2"></i>Quản lý Product (Bài tập thêm AJAX)
+			</button>
+		</li>
+	</ul>
+
+	<div class="tab-content" id="myTabContent">
+		<!-- TAB 1: CATEGORY -->
+		<div class="tab-pane fade show active" id="category-pane" role="tabpanel">
+			<div class="card p-4">
+				<div class="d-flex justify-content-between align-items-center mb-3">
+					<h4 class="mb-0 fw-bold text-primary"><i class="fas fa-list me-2"></i>Danh sách Category</h4>
+					<button class="btn btn-success" onclick="showCreateNewCategoryModal()">
+						<i class="fas fa-plus me-1"></i>Thêm Category Ajax
+					</button>
+				</div>
+
+				<div class="table-responsive">
+					<table class="table table-hover table-striped align-middle" id="categoryTable">
+						<thead class="table-dark">
+							<tr>
+								<th>Id</th>
+								<th>Icon</th>
+								<th>Name</th>
+								<th class="text-center" style="width: 140px;">Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							<!-- Data rendered via AJAX -->
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<!-- TAB 2: PRODUCT -->
+		<div class="tab-pane fade" id="product-pane" role="tabpanel">
+			<div class="card p-4">
+				<div class="d-flex justify-content-between align-items-center mb-3">
+					<h4 class="mb-0 fw-bold text-success"><i class="fas fa-boxes me-2"></i>Danh sách Product (Bài tập thêm)</h4>
+					<button class="btn btn-primary" onclick="showCreateNewProductModal()">
+						<i class="fas fa-plus me-1"></i>Thêm Product Ajax
+					</button>
+				</div>
+
+				<div class="table-responsive">
+					<table class="table table-hover table-striped align-middle" id="productTable">
+						<thead class="table-dark">
+							<tr>
+								<th>Id</th>
+								<th>Image</th>
+								<th>Name</th>
+								<th>Unit Price</th>
+								<th>Quantity</th>
+								<th>Category</th>
+								<th class="text-center" style="width: 140px;">Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							<!-- Data rendered via AJAX -->
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- ==================== MODAL THÊM CATEGORY ==================== -->
+<div class="modal fade" id="createCategoryModal" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<form id="addCategory" method="post" enctype="multipart/form-data">
+				<div class="modal-header bg-success text-white">
+					<h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Add Category</h5>
+					<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-3">
+						<label for="new_categoryname" class="form-label fw-bold">Category Name</label>
+						<input type="text" class="form-control" id="new_categoryname" name="categoryName" required>
+					</div>
+					<div class="mb-3">
+						<label for="new_icon" class="form-label fw-bold">Icon</label>
+						<input type="file" class="form-control" id="new_icon" name="icon" accept="image/*">
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+					<button type="submit" class="btn btn-success">Thêm Category</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+<!-- ==================== MODAL CẬP NHẬT CATEGORY ==================== -->
+<div class="modal fade" id="updateCategoryInfoModal" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header bg-primary text-white">
+				<h5 class="modal-title"><i class="fas fa-edit me-2"></i>Update Category</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+			</div>
+			<div class="modal-body">
+				<div class="card mb-3 p-3 bg-light border">
+					<h6 class="fw-bold mb-2"><i class="far fa-address-card me-2"></i>Thông tin hiện tại:</h6>
+					<p class="mb-1" id="updateCategoryInfoModalId"></p>
+					<p class="mb-1" id="updateCategoryInfoModalName"></p>
+					<p class="mb-0" id="updateCategoryInfoModalIcon"></p>
+				</div>
+
+				<form id="updateCategory" method="post" enctype="multipart/form-data">
+					<input type="hidden" id="categoryId_up" name="categoryId">
+					<div class="mb-3">
+						<label for="categoryName_up" class="form-label fw-bold">Category Name mới</label>
+						<input type="text" class="form-control" id="categoryName_up" name="categoryName" required>
+					</div>
+					<div class="mb-3">
+						<label for="icon_up" class="form-label fw-bold">Icon mới (tùy chọn)</label>
+						<input type="file" class="form-control" id="icon_up" name="icon" accept="image/*">
+					</div>
+					<div class="text-end">
+						<button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Đóng</button>
+						<button type="submit" class="btn btn-primary">Cập nhật</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- ==================== MODAL THÊM PRODUCT ==================== -->
+<div class="modal fade" id="createProductModal" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<form id="addProduct" method="post" enctype="multipart/form-data">
+				<div class="modal-header bg-primary text-white">
+					<h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Thêm Product mới</h5>
+					<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-2">
+						<label class="form-label fw-bold">Tên sản phẩm</label>
+						<input type="text" class="form-control" name="productName" required>
+					</div>
+					<div class="row mb-2">
+						<div class="col">
+							<label class="form-label fw-bold">Giá đơn vị</label>
+							<input type="number" class="form-control" name="unitPrice" required>
+						</div>
+						<div class="col">
+							<label class="form-label fw-bold">Số lượng</label>
+							<input type="number" class="form-control" name="quantity" value="10" required>
+						</div>
+					</div>
+					<div class="mb-2">
+						<label class="form-label fw-bold">Thuộc Category</label>
+						<select class="form-select" name="categoryId" id="prodCategorySelect" required>
+							<!-- Options rendered dynamically -->
+						</select>
+					</div>
+					<div class="mb-2">
+						<label class="form-label fw-bold">Mô tả</label>
+						<input type="text" class="form-control" name="description">
+					</div>
+					<div class="mb-2">
+						<label class="form-label fw-bold">Hình ảnh sản phẩm</label>
+						<input type="file" class="form-control" name="imageFile" accept="image/*">
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+					<button type="submit" class="btn btn-primary">Thêm sản phẩm</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- JAVASCRIPT AJAX CALLS THEO TÀI LIỆU -->
+<script type="text/javascript">
+/* 1. Tải danh sách Category bằng AJAX (Trang 7) */
+function loadCategories() {
+	$.getJSON(contextPath + '/api/category', function(json) {
+		var list = Array.isArray(json) ? json : (json.body || []);
+		var tr = [];
+		var selectOptions = '<option value="">-- Chọn danh mục --</option>';
+		for (var i = 0; i < list.length; i++) {
+			var iconUrl = list[i].icon ? '/admin/categories/images/' + list[i].icon : 'https://via.placeholder.com/70?text=No+Img';
+			tr.push('<tr>');
+			tr.push('<td>' + list[i].categoryId + '</td>');
+			tr.push('<td><img src="' + iconUrl + '" class="img-fluid" alt="icon"></td>');
+			tr.push('<td class="fw-semibold">' + list[i].categoryName + '</td>');
+			tr.push('<td class="text-center">'
+				+ '<button data-id="' + list[i].categoryId + '" data-name="' + list[i].categoryName + '" data-icon="' + (list[i].icon || '') + '" class="btn btn-sm btn-outline-warning editcate me-2" title="Sửa"><i class="fa fa-edit"></i></button>'
+				+ '<button data-id="' + list[i].categoryId + '" class="btn btn-sm btn-outline-danger delcate" title="Xóa"><i class="fa fa-trash"></i></button>'
+				+ '</td>');
+			tr.push('</tr>');
+
+			selectOptions += '<option value="' + list[i].categoryId + '">' + list[i].categoryName + '</option>';
+		}
+		$('#categoryTable tbody').html(tr.join(''));
+		$('#prodCategorySelect').html(selectOptions);
+	});
+}
+
+/* 2. Thêm Category bằng AJAX (Trang 7, 8) */
+function showCreateNewCategoryModal() {
+	$('#new_categoryname').val('');
+	$('#new_icon').val('');
+	var modal = new bootstrap.Modal(document.getElementById('createCategoryModal'));
+	modal.show();
+}
+
+$("form#addCategory").submit(function(e) {
+	e.preventDefault();
+	var formData = new FormData(this);
+	$.ajax({
+		url: contextPath + '/api/category/addCategory',
+		type: 'POST',
+		dataType: "json",
+		data: formData,
+		success: function (data) {
+			bootstrap.Modal.getInstance(document.getElementById('createCategoryModal')).hide();
+			loadCategories();
+		},
+		cache: false,
+		contentType: false,
+		processData: false
+	});
+});
+
+/* 3. Cập nhật Category bằng AJAX (Trang 8, 9, 10) */
+$(document).on('click', '.editcate', function() {
+	var categoryId = $(this).data('id');
+	var categoryName = $(this).data('name');
+	var icon = $(this).data('icon');
+	showEditCategoryModal(categoryId, categoryName, icon, this);
+});
+
+function showEditCategoryModal(categoryId, categoryName, icon, btn) {
+	$('#updateCategoryInfoModalId').text("Category ID: " + categoryId);
+	$('#updateCategoryInfoModalName').text("Category Name: " + categoryName);
+	$('#updateCategoryInfoModalIcon').text('Icon: ' + (icon ? icon : 'Chưa có'));
+	$('#categoryName_up').val(categoryName);
+	$('#categoryId_up').val(categoryId);
+	$('#icon_up').val('');
+	var modal = new bootstrap.Modal(document.getElementById('updateCategoryInfoModal'));
+	modal.show();
+}
+
+$("form#updateCategory").submit(function(e) {
+	e.preventDefault();
+	var formData = new FormData(this);
+	$.ajax({
+		url: contextPath + '/api/category/updateCategory',
+		type: 'PUT',
+		dataType: "json",
+		data: formData,
+		success: function (data) {
+			bootstrap.Modal.getInstance(document.getElementById('updateCategoryInfoModal')).hide();
+			loadCategories();
+		},
+		cache: false,
+		contentType: false,
+		processData: false
+	});
+});
+
+/* 4. Xóa Category bằng AJAX (Trang 10) */
+$(document).on('click', '.delcate', function() {
+	var id = $(this).data('id');
+	if (confirm('Do you really want to delete record?')) {
+		var row = $(this).closest('tr');
+		$.ajax({
+			type: "DELETE",
+			url: contextPath + '/api/category/deleteCategory?categoryId=' + id,
+			dataType: "json",
+			success: function() {
+				row.fadeOut('slow', function() {
+					$(this).remove();
+				});
+			},
+			error: function() {
+				alert('Lỗi khi xóa danh mục!');
+			}
+		});
+	}
+});
+
+/* 5. Quản lý Product (Bài tập thêm - Trang 11) */
+function loadProducts() {
+	$.getJSON(contextPath + '/api/product', function(json) {
+		var list = Array.isArray(json) ? json : (json.body || []);
+		var tr = [];
+		for (var i = 0; i < list.length; i++) {
+			var imgUrl = list[i].images ? '/admin/products/images/' + list[i].images : 'https://via.placeholder.com/70?text=No+Img';
+			var catName = (list[i].category && list[i].category.categoryName) ? list[i].category.categoryName : 'N/A';
+			tr.push('<tr>');
+			tr.push('<td>' + list[i].productId + '</td>');
+			tr.push('<td><img src="' + imgUrl + '" class="img-fluid" alt="product"></td>');
+			tr.push('<td class="fw-semibold">' + list[i].productName + '</td>');
+			tr.push('<td>' + Number(list[i].unitPrice).toLocaleString() + ' đ</td>');
+			tr.push('<td>' + list[i].quantity + '</td>');
+			tr.push('<td><span class="badge bg-info text-dark">' + catName + '</span></td>');
+			tr.push('<td class="text-center">'
+				+ '<button data-id="' + list[i].productId + '" class="btn btn-sm btn-outline-danger delprod" title="Xóa"><i class="fa fa-trash"></i></button>'
+				+ '</td>');
+			tr.push('</tr>');
+		}
+		$('#productTable tbody').html(tr.join(''));
+	});
+}
+
+function showCreateNewProductModal() {
+	$('#addProduct')[0].reset();
+	var modal = new bootstrap.Modal(document.getElementById('createProductModal'));
+	modal.show();
+}
+
+$("form#addProduct").submit(function(e) {
+	e.preventDefault();
+	var formData = new FormData(this);
+	$.ajax({
+		url: contextPath + '/api/product/addProduct',
+		type: 'POST',
+		dataType: "json",
+		data: formData,
+		success: function (data) {
+			bootstrap.Modal.getInstance(document.getElementById('createProductModal')).hide();
+			loadProducts();
+		},
+		cache: false,
+		contentType: false,
+		processData: false
+	});
+});
+
+$(document).on('click', '.delprod', function() {
+	var id = $(this).data('id');
+	if (confirm('Bạn có chắc muốn xóa sản phẩm này?')) {
+		var row = $(this).closest('tr');
+		$.ajax({
+			type: "DELETE",
+			url: contextPath + '/api/product/deleteProduct?productId=' + id,
+			dataType: "json",
+			success: function() {
+				row.fadeOut('slow', function() {
+					$(this).remove();
+				});
+			}
+		});
+	}
+});
+
+// Tự động load dữ liệu khi vào trang
+$(document).ready(function() {
+	loadCategories();
+	loadProducts();
+});
+</script>
+</body>
+</html>

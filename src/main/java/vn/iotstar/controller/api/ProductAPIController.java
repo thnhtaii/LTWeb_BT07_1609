@@ -9,8 +9,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,17 +43,31 @@ public class ProductAPIController {
 		return new ResponseEntity<Response>(new Response(true, "Thành công", productService.findAll()), HttpStatus.OK);
 	}
 
-	@PostMapping(path = "/addProduct", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
-	public ResponseEntity<?> addProduct(@Validated @RequestParam("productName") String productName,
-			@RequestParam("quantity") int quantity, @RequestParam("unitPrice") double unitPrice,
-			@RequestParam(value = "images", required = false) MultipartFile image,
-			@RequestParam(value = "description", defaultValue = "") String description,
-			@RequestParam(value = "discount", defaultValue = "0") double discount,
-			@RequestParam("categoryId") Long categoryId) {
+	@PostMapping(path = "/getProduct")
+	public ResponseEntity<?> getProduct(@RequestParam("id") Long id) {
+		Optional<Product> opt = productService.findById(id);
+		if (opt.isPresent()) {
+			return new ResponseEntity<Response>(new Response(true, "Thành công", opt.get()), HttpStatus.OK);
+		}
+		return new ResponseEntity<Response>(new Response(false, "Thất bại", null), HttpStatus.NOT_FOUND);
+	}
 
-		Optional<Category> optCategory = categoryService.findById(categoryId);
-		if (optCategory.isEmpty()) {
-			return new ResponseEntity<Response>(new Response(false, "Category không tồn tại trong hệ thống", null),
+	@PostMapping(path = "/addProduct", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+	public ResponseEntity<?> addProduct(
+			@Validated @RequestParam("productName") String productName,
+			@RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
+			@RequestParam(value = "images", required = false) MultipartFile images,
+			@RequestParam(value = "unitPrice", defaultValue = "0") Double unitPrice,
+			@RequestParam(value = "discount", defaultValue = "0") Double discount,
+			@RequestParam(value = "description", defaultValue = "") String description,
+			@RequestParam(value = "categoryId", required = false) Long categoryId,
+			@RequestParam(value = "quantity", defaultValue = "0") Integer quantity,
+			@RequestParam(value = "status", defaultValue = "1") Short status) {
+
+		Optional<Product> optProduct = productService.findByProductName(productName);
+		if (optProduct.isPresent()) {
+			return new ResponseEntity<Response>(
+					new Response(false, "Sản phẩm này đã tồn tại trong hệ thống", optProduct.get()),
 					HttpStatus.BAD_REQUEST);
 		}
 
@@ -62,17 +78,77 @@ public class ProductAPIController {
 		product.setDescription(description);
 		product.setDiscount(discount);
 		product.setCreateDate(new Date());
-		product.setStatus((short) 1);
-		product.setCategory(optCategory.get());
+		product.setStatus(status);
 
-		if (image != null && !image.isEmpty()) {
+		if (categoryId != null) {
+			Optional<Category> optCategory = categoryService.findById(categoryId);
+			optCategory.ifPresent(product::setCategory);
+		}
+
+		MultipartFile fileToUpload = (imageFile != null && !imageFile.isEmpty()) ? imageFile : images;
+		if (fileToUpload != null && !fileToUpload.isEmpty()) {
 			UUID uuid = UUID.randomUUID();
-			String filename = storageService.getSorageFilename(image, uuid.toString());
-			storageService.store(image, filename);
+			String filename = storageService.getSorageFilename(fileToUpload, uuid.toString());
+			storageService.store(fileToUpload, filename);
 			product.setImages(filename);
 		}
 
 		productService.save(product);
-		return new ResponseEntity<Response>(new Response(true, "Thêm sản phẩm thành công", product), HttpStatus.OK);
+		return new ResponseEntity<Response>(new Response(true, "Thành công", product), HttpStatus.OK);
+	}
+
+	@PutMapping(path = "/updateProduct", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+	public ResponseEntity<?> updateProduct(
+			@RequestParam("productId") Long productId,
+			@RequestParam("productName") String productName,
+			@RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
+			@RequestParam(value = "images", required = false) MultipartFile images,
+			@RequestParam(value = "unitPrice", defaultValue = "0") Double unitPrice,
+			@RequestParam(value = "discount", defaultValue = "0") Double discount,
+			@RequestParam(value = "description", defaultValue = "") String description,
+			@RequestParam(value = "categoryId", required = false) Long categoryId,
+			@RequestParam(value = "quantity", defaultValue = "0") Integer quantity,
+			@RequestParam(value = "status", defaultValue = "1") Short status) {
+
+		Optional<Product> opt = productService.findById(productId);
+		if (opt.isEmpty()) {
+			return new ResponseEntity<Response>(new Response(false, "Không tìm thấy sản phẩm", null),
+					HttpStatus.BAD_REQUEST);
+		}
+
+		Product product = opt.get();
+		product.setProductName(productName);
+		product.setQuantity(quantity);
+		product.setUnitPrice(unitPrice);
+		product.setDescription(description);
+		product.setDiscount(discount);
+		product.setStatus(status);
+
+		if (categoryId != null) {
+			Optional<Category> optCategory = categoryService.findById(categoryId);
+			optCategory.ifPresent(product::setCategory);
+		}
+
+		MultipartFile fileToUpload = (imageFile != null && !imageFile.isEmpty()) ? imageFile : images;
+		if (fileToUpload != null && !fileToUpload.isEmpty()) {
+			UUID uuid = UUID.randomUUID();
+			String filename = storageService.getSorageFilename(fileToUpload, uuid.toString());
+			storageService.store(fileToUpload, filename);
+			product.setImages(filename);
+		}
+
+		productService.save(product);
+		return new ResponseEntity<Response>(new Response(true, "Cập nhật Thành công", product), HttpStatus.OK);
+	}
+
+	@DeleteMapping(path = "/deleteProduct")
+	public ResponseEntity<?> deleteProduct(@RequestParam("productId") Long productId) {
+		Optional<Product> opt = productService.findById(productId);
+		if (opt.isEmpty()) {
+			return new ResponseEntity<Response>(new Response(false, "Không tìm thấy sản phẩm", null),
+					HttpStatus.BAD_REQUEST);
+		}
+		productService.delete(opt.get());
+		return new ResponseEntity<Response>(new Response(true, "Xóa Thành công", opt.get()), HttpStatus.OK);
 	}
 }
